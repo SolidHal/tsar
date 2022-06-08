@@ -145,12 +145,12 @@ def set_song_metadata(track, input_filename):
                 return image.get("url")
         raise ValueError(f"could not find suitable album art image in images: {images}")
 
-    def connonical_artist(track):
+    def canonical_artist(track):
         track_artist = track.get("artists")[0].get("name", "Unknown Artist")
         album_artist = track.get("album").get("artists")[0].get("name", "Unknown Artist")
 
         if track_artist != album_artist:
-            raise ValueError(f"could not determine connical artist, track_artist = {track_artist}, album_artist = {album_artist}")
+            raise ValueError(f"could not determine canonical artist, track_artist = {track_artist}, album_artist = {album_artist}")
 
         return track_artist
 
@@ -175,7 +175,7 @@ def set_song_metadata(track, input_filename):
     audiofile.tag.images.set(3, img_data=album_art, mime_type="image/jpeg")
     audiofile.tag.save()
 
-    artist = connonical_artist(track)
+    artist = canonical_artist(track)
     title = track.get("name")
     return f"{artist} - {title}.mp3"
 

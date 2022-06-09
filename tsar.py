@@ -7,6 +7,7 @@ import spotipy.util as util
 import eyed3
 import click
 import urllib.request
+import re
 import time
 import subprocess
 from json.decoder import JSONDecodeError
@@ -16,6 +17,10 @@ def remove_file(filename):
         os.remove(filename)
     except FileNotFoundError:
         pass
+
+def sanitize_filename(filename):
+    """Takes only a filename, not a full path"""
+    return re.sub('/', ' ', filename)
 
 def start_recorder(output_filename, device_name, username, password, binary_arg):
     # setup recorder
@@ -175,8 +180,8 @@ def set_song_metadata(track, input_filename):
     audiofile.tag.images.set(3, img_data=album_art, mime_type="image/jpeg")
     audiofile.tag.save()
 
-    artist = canonical_artist(track)
-    title = track.get("name")
+    artist = sanitize_filename(canonical_artist(track))
+    title = sanitize_filename(track.get("name"))
     return f"{artist} - {title}.mp3"
 
 

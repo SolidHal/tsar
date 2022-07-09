@@ -25,9 +25,6 @@ def sanitize_filename(filename):
 
 def start_recorder(output_filename, device_name, username, password, binary_arg):
     # setup recorder
-
-    # binary_arg = "librespot"
-
     generic_args = ["-n", device_name,
                     "-b", "320",
                     "--device-type", "computer",
@@ -38,12 +35,9 @@ def start_recorder(output_filename, device_name, username, password, binary_arg)
                     "--backend", "pipe",
                     "--passthrough" ]
 
-    # event_arg = ["--onevent", "'handle-events.py'"]
-    event_arg = []
-
     output_arg = ["--device", output_filename]
 
-    command = [binary_arg, "-u", username, "-p", password] + generic_args + event_arg + output_arg
+    command = [binary_arg, "-u", username, "-p", password] + generic_args + output_arg
     print("starting recorder with command: ")
     print(command)
     recorder = subprocess.Popen(command, shell=False)

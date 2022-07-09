@@ -7,6 +7,7 @@ librespot
 spotipy
 eyed3
 click
+ffmpeg
 ```
 
 ## usage:

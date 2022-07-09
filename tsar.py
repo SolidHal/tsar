@@ -212,6 +212,11 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
     # get tracklist from known playlist
     tracks = find_playlist_tracks(spotify_api, playlist_id)
 
+    print(f"number of tracks = {len(tracks)}")
+    if len(tracks) == 0:
+        print("no tracks to process, quitting tsar...")
+        return
+
     for track in tracks:
         # remove the playlist metadata
         unwrapped_track = track.get("track")

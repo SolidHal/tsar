@@ -10,6 +10,7 @@ import urllib.request
 import re
 import time
 import subprocess
+import shutil
 from json.decoder import JSONDecodeError
 
 def remove_file(filename):
@@ -20,7 +21,7 @@ def remove_file(filename):
 
 def sanitize_filename(filename):
     """Takes only a filename, not a full path"""
-    return re.sub('/', ' ', filename)
+    return re.sub('/', ' ', filename).strip()
 
 def start_recorder(output_filename, device_name, username, password, binary_arg):
     # setup recorder
@@ -223,7 +224,7 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
         song_name = set_song_metadata(unwrapped_track, mp3_filename)
         out = f"{output_dir}/{song_name}"
         print(f"moving song to {out}")
-        os.rename(mp3_filename, out)
+        shutil.move(mp3_filename, out)
         cleanup_files()
 
     if empty_playlist:

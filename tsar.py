@@ -40,7 +40,7 @@ def start_recorder(output_filename, device_name, username, password, binary_arg)
     command = [binary_arg, "-u", username, "-p", password] + generic_args + output_arg
     print("starting recorder with command: ")
     print(command)
-    recorder = subprocess.Popen(command, shell=False, stderr=subprocess.PIPE, encoding="utf-8")
+    recorder = subprocess.Popen(command, shell=False, stderr=subprocess.PIPE)
 
     # let recorder warm up
     time.sleep(3)
@@ -226,7 +226,8 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
         cleanup_files()
         if recorder.stderr:
             finish(recorder)
-            raise ValueError(f"Error processing song using tsar: stderr={recorder.stderr}")
+            print(recorder.stderr)
+            raise ValueError(f"Error processing song using tsar")
 
     # validate that all tracks were properly downloaded
     filenames = next(os.walk(output_dir), (None, None, []))[2]  # [] if no file

@@ -40,7 +40,7 @@ def start_recorder(output_filename, device_name, username, password, binary_arg)
     command = [binary_arg, "-u", username, "-p", password] + generic_args + output_arg
     print("starting recorder with command: ")
     print(command)
-    recorder = subprocess.Popen(command, shell=False)
+    recorder = subprocess.Popen(command, shell=False, stderr=subprocess.PIPE, encoding="utf-8")
 
     # let recorder warm up
     time.sleep(3)
@@ -196,6 +196,10 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
         remove_file(ogg_filename)
         remove_file(mp3_filename)
 
+    def finish(recorder):
+        cleanup_files()
+        recorder.kill()
+
     cleanup_files()
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir, exist_ok=True)
@@ -220,6 +224,17 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
         print(f"moving song to {out}")
         shutil.move(mp3_filename, out)
         cleanup_files()
+        if recorder.stderr:
+            finish(recorder)
+            raise ValueError(f"Error processing song using tsar: stderr={recorder.stderr}")
+
+    # validate that all tracks were properly downloaded
+    filenames = next(os.walk(output_dir), (None, None, []))[2]  # [] if no file
+    if len(tracks) != len(filenames):
+        finish(recorder)
+        raise ValueError(f"""Expected {len(tracks)} songs, but found {len(filenames)}.
+                             expected list: {tracks}
+                             found list: {filenames}""")
 
     if empty_playlist:
         print(f"removing {len(tracks)} songs from playlist {playlist_id}")
@@ -230,8 +245,7 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
 
 
     # cleanup
-    cleanup_files()
-    recorder.kill()
+    finish(recorder)
     print(f"tsar finished. {len(tracks)} songs from playlist {playlist_id}")
 
 if __name__ == "__main__":

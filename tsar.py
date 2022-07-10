@@ -180,14 +180,7 @@ def set_song_metadata(track, input_filename):
     return f"{artist} - {title}.mp3"
 
 
-@click.command()
-@click.option("--output_dir", type=str, required=True, help="location to save the songs to")
-@click.option("--playlist_id", type=str, required=True, help="playlist uri to record, of the form spotify:playlist:<rand>")
-@click.option("--username", type=str, required=True, help="username of the user to login as")
-@click.option("--password", type=str, required=True, help="password of the user to login as")
-@click.option("--empty_playlist", is_flag=True, default=False, help="remove all songs from the playlist when complete")
-@click.option("--librespot_binary", type=str, default="librespot", help="path to the librespot binary")
-def main(output_dir, playlist_id, username, password, empty_playlist, librespot_binary):
+def run(output_dir, playlist_id, username, password, empty_playlist, librespot_binary):
     ogg_filename = "/tmp/raw_file.ogg"
     mp3_filename = "/tmp/untagged_song.mp3"
     device_name = "_comp_"
@@ -252,6 +245,21 @@ def main(output_dir, playlist_id, username, password, empty_playlist, librespot_
 
 
     print(f"tsar finished. {len(tracks)} songs from playlist {playlist_id}")
+
+@click.command()
+@click.option("--output_dir", type=str, required=True, help="location to save the songs to")
+@click.option("--playlist_id", type=str, required=True, help="playlist uri to record, of the form spotify:playlist:<rand>")
+@click.option("--username", type=str, required=True, help="username of the user to login as")
+@click.option("--password", type=str, required=True, help="password of the user to login as")
+@click.option("--empty_playlist", is_flag=True, default=False, help="remove all songs from the playlist when complete")
+@click.option("--librespot_binary", type=str, default="librespot", help="path to the librespot binary")
+def main(output_dir, playlist_id, username, password, empty_playlist, librespot_binary):
+    run(output_dir=output_dir,
+        playlist_id=playlist_id,
+        username=username,
+        password=password,
+        empty_playlist=empty_playlist,
+        librespot_binary=librespot_binary)
 
 if __name__ == "__main__":
     main()

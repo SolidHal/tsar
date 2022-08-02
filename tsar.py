@@ -62,7 +62,7 @@ def start_api(username):
         os.remove(f".cache-{username}")
         token = util.prompt_for_user_token(username, scope)
 
-    spotify_api = spotipy.Spotify(auth=token)
+    spotify_api = spotipy.Spotify(auth=token, retries=10, status_retries=10, backoff_factor=1.5)
 
     return spotify_api
 

@@ -69,16 +69,24 @@ def start_api(username):
 
 def find_device_id(spotify_api, device_name):
     device_id = None
-    devices = spotify_api.devices()
-    for dev in devices['devices']:
-        print(dev["name"])
-        if dev["name"] == device_name:
-            print("using device:")
-            print(dev)
-            device_id = dev["id"]
+    retry_count = 0
+    while(device_id is None):
+        devices = spotify_api.devices()
+        for dev in devices['devices']:
+            print(dev["name"])
+            if dev["name"] == device_name:
+                print("using device:")
+                print(dev)
+                device_id = dev["id"]
 
-    if device_id is None:
-        raise ValueError(f"could not find device, available devices are: {json.dumps(devices, sort_keys=True, indent=4)}")
+        if device_id is None and retry_count >= 5:
+            raise ValueError(f"could not find device after 5 retries, available devices are: {json.dumps(devices, sort_keys=True, indent=4)}")
+        elif device_id is None and retry_count < 5:
+            print(f"could not find device on retry {retry_count}, available devices are: {json.dumps(devices, sort_keys=True, indent=4)}")
+            print("sleeping before trying again")
+            time.sleep(30)
+        else:
+            return device_id
 
     return device_id
 

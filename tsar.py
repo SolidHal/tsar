@@ -90,10 +90,10 @@ def find_device_id(spotify_api, device_name):
 
     return device_id
 
-def find_playlist_tracks(spotify_api, playlist_id):
+def find_playlist_tracks(spotify_api, playlist_uri):
     tracks = []
     max_track_limit = 100
-    playlist = spotify_api.playlist_items(playlist_id, limit=max_track_limit, additional_types=('track', ))
+    playlist = spotify_api.playlist_items(playlist_uri, limit=max_track_limit, additional_types=('track', ))
     playlist_size = playlist.get("total")
     tracks += playlist.get("items")
     print(f"playlist size is: {playlist_size}")
@@ -102,12 +102,38 @@ def find_playlist_tracks(spotify_api, playlist_id):
     offset = max_track_limit
     end = playlist_size
     while(offset < playlist_size):
-        playlist = spotify_api.playlist_items(playlist_id, limit=max_track_limit, offset=offset, additional_types=('track', ))
+        playlist = spotify_api.playlist_items(playlist_uri, limit=max_track_limit, offset=offset, additional_types=('track', ))
         tracks += playlist.get("items")
         offset += max_track_limit
 
     if(playlist_size != len(tracks)):
         raise ValueError(f"playlist has {playlist_size} songs but only got {len(tracks)}")
+
+    # remove the playlist metadata
+    unwrapped_tracks = []
+    for track in tracks:
+        unwrapped_tracks.append(track.get("track"))
+
+    return unwrapped_tracks
+
+def find_album_tracks(spotify_api, album_uri):
+    tracks = []
+    max_track_limit = 50
+    album = spotify_api.album_items(album_uri)
+    album_size = album.get("total")
+    tracks += album.get("items")
+    print(f"album size is: {album_size}")
+
+    # since the api limits us to ~100 tracks at a time, concatonate our requests
+    offset = max_track_limit
+    end = album_size
+    while(offset < album_size):
+        playlist = spotify_api.album_tracks(album_uri, limit=max_track_limit, offset=offset)
+        tracks += playlist.get("items")
+        offset += max_track_limit
+
+    if(album_size != len(tracks)):
+        raise ValueError(f"album has {album_size} songs but only got {len(tracks)}")
 
     return tracks
 
@@ -191,7 +217,7 @@ def set_song_metadata(track, input_filename):
     return f"{artist} - {title}.mp3"
 
 
-def run(output_dir, playlist_id, username, password, empty_playlist, librespot_binary):
+def run(output_dir, uri, username, password, empty_playlist, librespot_binary):
     ogg_filename = "/tmp/raw_file.ogg"
     mp3_filename = "/tmp/untagged_song.mp3"
     device_name = "_comp_"
@@ -213,8 +239,12 @@ def run(output_dir, playlist_id, username, password, empty_playlist, librespot_b
     recorder = start_recorder(ogg_filename, device_name, username, password, librespot_binary)
     recorder_device_id = find_device_id(spotify_api, device_name)
 
-    # get tracklist from known playlist
-    tracks = find_playlist_tracks(spotify_api, playlist_id)
+    if "playlist" in uri:
+        # get tracklist from known playlist
+        tracks = find_playlist_tracks(spotify_api, uri)
+    if "album" in uri:
+        # get tracklist from known album
+        tracks = find_album_tracks(spotify_api, uri)
 
     print(f"number of tracks = {len(tracks)}")
     if len(tracks) == 0:
@@ -222,13 +252,11 @@ def run(output_dir, playlist_id, username, password, empty_playlist, librespot_b
         return
 
     for track in tracks:
-        # remove the playlist metadata
-        unwrapped_track = track.get("track")
-        play_song(spotify_api, recorder_device_id, unwrapped_track.get("uri"))
+        play_song(spotify_api, recorder_device_id, track.get("uri"))
         # process the song
         # recorder outputs to ogg_filename
         convert_song(ogg_filename, mp3_filename)
-        song_name = set_song_metadata(unwrapped_track, mp3_filename)
+        song_name = set_song_metadata(track, mp3_filename)
         out = f"{output_dir}/{song_name}"
         print(f"moving song to {out}")
         shutil.move(mp3_filename, out)
@@ -248,25 +276,28 @@ def run(output_dir, playlist_id, username, password, empty_playlist, librespot_b
                              found list: {filenames}""")
 
     if empty_playlist:
-        print(f"removing {len(tracks)} songs from playlist {playlist_id}")
-        uris = []
-        for track in tracks:
-            uris.append(track.get("track").get("uri"))
-        spotify_api.playlist_remove_all_occurrences_of_items(playlist_id, uris)
+        if "album" in uri:
+            print(f"ignoring empty_playlist flag as we are working with an album")
+        else:
+            print(f"removing {len(tracks)} songs from playlist {uri}")
+            uris = []
+            for track in tracks:
+                uris.append(track.get("uri"))
+            spotify_api.playlist_remove_all_occurrences_of_items(uri, uris)
 
 
-    print(f"tsar finished. {len(tracks)} songs from playlist {playlist_id}")
+    print(f"tsar finished. {len(tracks)} songs from playlist {uri}")
 
 @click.command()
 @click.option("--output_dir", type=str, required=True, help="location to save the songs to")
-@click.option("--playlist_id", type=str, required=True, help="playlist uri to record, of the form spotify:playlist:<rand>")
+@click.option("--uri", type=str, required=True, help="playlist or album uri to record, of the form spotify:playlist:<rand> or spotify:album:<rand>")
 @click.option("--username", type=str, required=True, help="username of the user to login as")
 @click.option("--password", type=str, required=True, help="password of the user to login as")
 @click.option("--empty_playlist", is_flag=True, default=False, help="remove all songs from the playlist when complete")
 @click.option("--librespot_binary", type=str, default="librespot", help="path to the librespot binary")
-def main(output_dir, playlist_id, username, password, empty_playlist, librespot_binary):
+def main(output_dir, uri, username, password, empty_playlist, librespot_binary):
     run(output_dir=output_dir,
-        playlist_id=playlist_id,
+        uri=uri,
         username=username,
         password=password,
         empty_playlist=empty_playlist,

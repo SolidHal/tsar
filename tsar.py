@@ -119,7 +119,7 @@ def find_playlist_tracks(spotify_api, playlist_uri):
 def find_album_tracks(spotify_api, album_uri):
     tracks = []
     max_track_limit = 50
-    album = spotify_api.album_items(album_uri)
+    album = spotify_api.album_tracks(album_uri)
     album_size = album.get("total")
     tracks += album.get("items")
     print(f"album size is: {album_size}")

@@ -121,19 +121,36 @@ def find_album_tracks(spotify_api, album_uri):
     max_track_limit = 50
     album = spotify_api.album_tracks(album_uri)
     album_size = album.get("total")
-    tracks += album.get("items")
     print(f"album size is: {album_size}")
 
-    # since the api limits us to ~100 tracks at a time, concatonate our requests
+    # albums return their track data in a different way than looking up the track
+    # to fix this, we do a second lookup of each uri asking for the track data in the format we actually want
+    album_track_uris = []
+    for track in album.get("items"):
+        album_track_uris.append(track.get("uri"))
+
+    album_tracks = spotify_api.tracks(album_track_uris)
+    tracks += album_tracks.get("tracks")
+
+
+    # since the api limits us to ~50 tracks at a time, concatonate our requests
     offset = max_track_limit
     end = album_size
     while(offset < album_size):
-        playlist = spotify_api.album_tracks(album_uri, limit=max_track_limit, offset=offset)
-        tracks += playlist.get("items")
+        album = spotify_api.album_tracks(album_uri, limit=max_track_limit, offset=offset)
+
+        album_track_uris = []
+        for track in album.get("items"):
+            album_track_uris.append(track.get("uri"))
+
+        album_tracks = spotify_api.tracks(album_track_uris)
+        tracks += album_tracks.get("tracks")
+
         offset += max_track_limit
 
     if(album_size != len(tracks)):
         raise ValueError(f"album has {album_size} songs but only got {len(tracks)}")
+
 
     return tracks
 

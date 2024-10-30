@@ -1,1 +1,3 @@
 .cache*
+cache_dir
+out

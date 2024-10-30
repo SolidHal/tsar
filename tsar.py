@@ -23,13 +23,14 @@ def sanitize_filename(filename):
     """Takes only a filename, not a full path"""
     return re.sub('/', ' ', filename).strip()
 
-def start_recorder(output_filename, device_name, username, password, binary_arg):
+def start_recorder(output_filename, device_name, cache_dir, username, binary_arg):
     # setup recorder
     generic_args = ["-n", device_name,
                     "-b", "320",
+                    "--autoplay", "off",
+                    "--system-cache", cache_dir,
                     "--device-type", "computer",
                     "--initial-volume", "100",
-                    "--disable-credential-cache",
                     "--disable-audio-cache",
                     "--disable-gapless",
                     "--backend", "pipe",
@@ -37,7 +38,7 @@ def start_recorder(output_filename, device_name, username, password, binary_arg)
 
     output_arg = ["--device", output_filename]
 
-    command = [binary_arg, "-u", username, "-p", password] + generic_args + output_arg
+    command = [binary_arg, "-u", username] + generic_args + output_arg
     print("starting recorder with command: ")
     print(command)
     recorder = subprocess.Popen(command, shell=False)
@@ -240,7 +241,7 @@ def set_song_metadata(track, input_filename):
     return f"{artist} - {title}.mp3"
 
 
-def run(output_dir, uri, username, password, empty_playlist, librespot_binary):
+def run(output_dir, uri, cache_dir, username, empty_playlist, librespot_binary):
     ogg_filename = "/tmp/raw_file.ogg"
     mp3_filename = "/tmp/untagged_song.mp3"
     device_name = "_comp_"
@@ -259,7 +260,7 @@ def run(output_dir, uri, username, password, empty_playlist, librespot_binary):
 
     # setup our apis
     spotify_api = start_api(username)
-    recorder = start_recorder(ogg_filename, device_name, username, password, librespot_binary)
+    recorder = start_recorder(ogg_filename, device_name, cache_dir, username, librespot_binary)
     recorder_device_id = find_device_id(spotify_api, device_name)
 
     if "playlist" in uri:
@@ -314,15 +315,15 @@ def run(output_dir, uri, username, password, empty_playlist, librespot_binary):
 @click.command()
 @click.option("--output_dir", type=str, required=True, help="location to save the songs to")
 @click.option("--uri", type=str, required=True, help="playlist or album uri to record, of the form spotify:playlist:<rand> or spotify:album:<rand>")
+@click.option("--cache_dir", type=str, required=True, help="directory of cached credentials.json")
 @click.option("--username", type=str, required=True, help="username of the user to login as")
-@click.option("--password", type=str, required=True, help="password of the user to login as")
 @click.option("--empty_playlist", is_flag=True, default=False, help="remove all songs from the playlist when complete")
 @click.option("--librespot_binary", type=str, default="librespot", help="path to the librespot binary")
-def main(output_dir, uri, username, password, empty_playlist, librespot_binary):
+def main(output_dir, uri, cache_dir, username, empty_playlist, librespot_binary):
     run(output_dir=output_dir,
         uri=uri,
+        cache_dir=cache_dir,
         username=username,
-        password=password,
         empty_playlist=empty_playlist,
         librespot_binary=librespot_binary)
 

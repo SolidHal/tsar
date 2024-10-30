@@ -3,7 +3,7 @@
 ## requires:
 ```
 librespot
- - built from https://github.com/SolidHal/librespot with fix for the pipe backend
+ - built with --features passthrough-decoder
 spotipy
 eyed3
 click
@@ -14,16 +14,16 @@ ffmpeg
 
 normal usage:
 ```
-./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --password="<password>"
+./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --cache_dir="cache_dir"
 ```
 
 empty the playlist once complete:
 ```
-./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --password="<password>" --empty_playlist
+./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --cache_dir="cache_dir" --empty_playlist
 ```
 
 use a custom build of librespot:
 ```
-./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --password="<password>" --librespot_binary="<path/to/binary>"
+./tsar.py --output_dir="out" --playlist_id="spotify:playlist:<rand>" --username="<username>" --cache_dir="cache_dir" --librespot_binary="<path/to/binary>"
 ```
 

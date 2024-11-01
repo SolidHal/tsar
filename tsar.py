@@ -211,7 +211,13 @@ def set_song_metadata(track, input_filename):
                 return track_artist
             elif "Traditional" in track_artist:
                 return album_artist
-            raise ValueError(f"could not determine canonical artist, track_artist = {track_artist}, album_artist = {album_artist}")
+            if "Unknown Artist" in album_artist:
+                return track_artist
+            if "Unknown Artist" in track_artist:
+                return album_artist
+            # if we get here and we have not found an appropriate artist, default to the track artist
+            print(f"picking track artist as canonical artist, track_artist = {track_artist}, album_artist = {album_artist}")
+            return track_artist
 
         return track_artist
 

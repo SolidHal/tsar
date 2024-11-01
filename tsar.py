@@ -246,6 +246,19 @@ def set_song_metadata(track, input_filename):
     title = sanitize_filename(track.get("name"))
     return f"{artist} - {title}.mp3"
 
+def _remove_tracks_from_playlist(spotify_api, tracks, uri):
+    print(f"removing {len(tracks)} songs from playlist {uri}")
+    uris = []
+    for track in tracks:
+        uris.append(track.get("uri"))
+        spotify_api.playlist_remove_all_occurrences_of_items(uri, uris)
+
+def empty_playlist(uri, username):
+    if not "playlist" in uri:
+        raise ValueError("can only empty a playlist, please provide a playlist uri")
+    spotify_api = start_api(username)
+    tracks = find_playlist_tracks(spotify_api, uri)
+    _remove_tracks_from_playlist(spotify_api, tracks, uri)
 
 def run(output_dir, uri, cache_dir, username, empty_playlist, librespot_binary):
     ogg_filename = "/tmp/raw_file.ogg"
@@ -309,11 +322,7 @@ def run(output_dir, uri, cache_dir, username, empty_playlist, librespot_binary):
         if "album" in uri:
             print(f"ignoring empty_playlist flag as we are working with an album")
         else:
-            print(f"removing {len(tracks)} songs from playlist {uri}")
-            uris = []
-            for track in tracks:
-                uris.append(track.get("uri"))
-            spotify_api.playlist_remove_all_occurrences_of_items(uri, uris)
+            _remove_tracks_from_playlist(spotify_api, tracks, uri)
 
 
     print(f"tsar finished. {len(tracks)} songs from playlist {uri}")

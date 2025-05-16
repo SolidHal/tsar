@@ -1,0 +1,20 @@
+[package]
+name = "tsar"
+version = "0.1.0"
+edition = "2021"
+
+
+# [lib]
+# name = "tsar"
+# path = "lib.rs"
+
+[[bin]]
+name = "tsar"
+path = "src/tsar.rs"
+doc = false
+
+[dependencies]
+clap = { version = "4.5.38", features = ["derive"] }
+id3 = "1.16.2"
+librespot = { version = "0.6.0", features = ["passthrough-decoder"] }
+rspotify = "0.14.0"

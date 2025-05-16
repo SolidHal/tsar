@@ -1,6 +1,7 @@
 .cache*
 cache_dir
 out
+.spotify_token_cache.json
 
 
 # Added by cargo

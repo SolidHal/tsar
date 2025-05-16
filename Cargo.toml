@@ -13,8 +13,18 @@ name = "tsar"
 path = "src/tsar.rs"
 doc = false
 
+[[bin]]
+name = "tsar_create_credentials"
+path = "src/tsar_create_credentials.rs"
+doc = false
+
 [dependencies]
+chrono = "0.4.41"
 clap = { version = "4.5.38", features = ["derive"] }
+env_logger = "0.11.8"
+futures = "0.3.31"
 id3 = "1.16.2"
 librespot = { version = "0.6.0", features = ["passthrough-decoder"] }
-rspotify = "0.14.0"
+log = "0.4.27"
+rspotify = { version = "0.14.0", features = ["cli"] }
+tokio = "1.45.0"

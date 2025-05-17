@@ -1,9 +1,9 @@
-// TODO import librespot (playback)
-// TODO import rspotify (control)
-// TODO import id3 (mp3 id3 tags)
-// TODO import clap cli lib
 use clap::Parser;
 use std::path::PathBuf;
+// use librespot;
+// use id3;
+//
+use tsar;
 
 // TODO just shell out to ffmpeg
 // std::process::Command("ffmpeg")
@@ -34,7 +34,15 @@ struct Args {
 
 }
 
-fn main() {
+
+
+
+
+
+
+
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
 
     println!("{}", args.uri);
@@ -42,4 +50,6 @@ fn main() {
     println!("{}", args.output_dir.display());
     println!("{}", args.username);
     println!("{}", args.empty_playlist);
+
+    tsar::tsar_run(args.output_dir, &args.uri, args.cache_dir, &args.username, args.empty_playlist).await;
 }

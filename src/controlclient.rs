@@ -1,18 +1,23 @@
 // creates rspotify clients for controling playback and retreiving metadata
 
+use std::path::PathBuf;
+
 use chrono::offset::Utc;
 use chrono::Duration;
 use rspotify::{
     prelude::*, scopes, AuthCodeSpotify,
-    Config, Credentials, OAuth,
+    Config, Credentials, OAuth, DEFAULT_CACHE_PATH
 };
 
-pub async fn create_playback_client() -> AuthCodeSpotify {
+pub async fn create_playback_client(token_cache_dir: PathBuf) -> AuthCodeSpotify {
+
+    let token_cache_path = token_cache_dir.join(DEFAULT_CACHE_PATH);
 
     // Enable token refreshing and caching so we can pass the saved token to the main tsar client
     let config = Config {
         token_cached: true,
         token_refreshing: true,
+        cache_path: token_cache_path,
         ..Default::default()
     };
     // May require the `env-file` feature enabled if the environment variables

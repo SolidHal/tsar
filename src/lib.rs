@@ -17,6 +17,11 @@ pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _u
         tracks  = find_album_tracks(&spotify_api, uri).await;
         print_tracks(&tracks);
     }
+    else if uri_is_track(uri) {
+        let track = find_track_from_uri(&spotify_api, uri).await;
+        tracks = vec![track];
+        print_tracks(&tracks);
+    }
 
     else {
         panic!("Unable to handle uri {uri}. uri should be for an album <spotify:album:blah> or a playlist <spotify:playlist:blah>");
@@ -39,6 +44,13 @@ fn uri_is_album(uri: &String) -> bool {
     return false;
 }
 
+fn uri_is_track(uri: &String) -> bool {
+    if uri.contains("spotify:track"){
+        return true;
+    }
+    return false
+}
+
 fn get_track_from_playable(item: &PlayableItem) -> &track::FullTrack {
     match item {
         PlayableItem::Track(t) => t,
@@ -55,8 +67,6 @@ fn print_tracks(tracks: &Vec<FullTrack>){
 }
 
 async fn find_playlist_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Vec<FullTrack> {
-
-    println!("getting all tracks from playlist {uri}");
     // Get all the tracks from the playlist
     let playlist_uri = PlaylistId::from_id_or_uri(uri).expect("unable to create playlist object from uri, is uri valid?");
 
@@ -76,7 +86,6 @@ async fn find_playlist_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Ve
 }
 
 async fn find_album_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Vec<FullTrack> {
-    println!("getting all tracks from playlist {uri}");
     // Get all the tracks from the album
     let album_uri = AlbumId::from_id_or_uri(uri).expect("unable to create album object from uri, is uri valid?");
 
@@ -94,4 +103,11 @@ async fn find_album_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Vec<F
     let album_tracks = spotify_api.tracks(album_uris, Option::from(Market::FromToken)).await.unwrap();
 
     return album_tracks
+}
+
+async fn find_track_from_uri(spotify_api: &AuthCodeSpotify, uri: &String) -> FullTrack {
+    let id: TrackId = TrackId::from_id_or_uri(uri).expect("unable to create track object from uri, is uri valid?");
+    let track: FullTrack = spotify_api.track(id, Option::from(Market::FromToken)).await.unwrap();
+
+    return track;
 }

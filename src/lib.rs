@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 use futures::stream::TryStreamExt;
 
 use rspotify::{model::*, prelude::{BaseClient, OAuthClient}, AuthCodeSpotify};
@@ -25,7 +25,6 @@ pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _u
     else {
         panic!("Unable to handle uri {uri}. uri should be for an album <spotify:album:blah> or a playlist <spotify:playlist:blah>");
     }
-
 
     if uri_is_playlist(uri) && empty_playlist != 0 {
         // empty the playlist
@@ -122,4 +121,28 @@ async fn find_track_from_uri(spotify_api: &AuthCodeSpotify, uri: &String) -> Ful
     let track: FullTrack = spotify_api.track(id, Option::from(Market::FromToken)).await.unwrap();
 
     return track;
+}
+
+async fn find_device_id(spotify_api: &AuthCodeSpotify, device_name: &str) -> String{
+
+    let mut device_id = None;
+    let retry_count = 0;
+
+    let mut devices: Vec<Device>;
+    while device_id.is_none() {
+        devices = spotify_api.device().await.expect("failed to get users devices");
+        for dev in &devices {
+            if dev.name == *device_name {
+                device_id = dev.id.clone();
+                println!("found device {device_name} {device_id:?}");
+                return device_id.unwrap();
+            }
+        }
+        if device_id.is_none() && retry_count < 5 {
+            // failed to find the device, lets wait and try again in a moment
+            println!("didn't find {device_name} in {devices:?}, trying again in a moment...");
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+    }
+    panic!("failed to find the requested device {device_name}")
 }

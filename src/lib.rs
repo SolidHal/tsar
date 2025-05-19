@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 use futures::stream::TryStreamExt;
 
-use rspotify::{prelude::BaseClient, AuthCodeSpotify, model::*,};
+use rspotify::{model::*, prelude::{BaseClient, OAuthClient}, AuthCodeSpotify};
 mod controlclient;
 
-pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _username: &String, _empty_playlist: u8) {
+pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _username: &String, empty_playlist: u8) {
     let spotify_api = controlclient::create_playback_client(cache_dir).await;
 
     let tracks: Vec<FullTrack>;
@@ -22,9 +22,21 @@ pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _u
         tracks = vec![track];
         print_tracks(&tracks);
     }
-
     else {
         panic!("Unable to handle uri {uri}. uri should be for an album <spotify:album:blah> or a playlist <spotify:playlist:blah>");
+    }
+
+
+    if uri_is_playlist(uri) && empty_playlist != 0 {
+        // empty the playlist
+        let playlist_uri = PlaylistId::from_id_or_uri(uri).expect("unable to create playlist object from uri, is uri valid?");
+        let mut playlist_uris = Vec::<PlayableId>::new();
+        for track in tracks {
+            let id = track.id.expect("failed to get id");
+            let playable = PlayableId::from(id);
+            playlist_uris.push(playable);
+        }
+        spotify_api.playlist_remove_all_occurrences_of_items(playlist_uri, playlist_uris, None).await.expect("Failed to remove all tracks from playlist");
     }
 
 

@@ -9,7 +9,7 @@ use rspotify::{
     Config, Credentials, OAuth, DEFAULT_CACHE_PATH
 };
 
-pub async fn create_playback_client(token_cache_dir: PathBuf) -> AuthCodeSpotify {
+pub async fn create_playback_client(token_cache_dir: &PathBuf) -> AuthCodeSpotify {
 
     let token_cache_path = token_cache_dir.join(DEFAULT_CACHE_PATH);
 

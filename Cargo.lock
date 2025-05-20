@@ -3761,6 +3761,7 @@ dependencies = [
  "librespot",
  "log",
  "rspotify",
+ "tempfile",
  "tokio",
 ]
 

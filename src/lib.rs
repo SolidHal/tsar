@@ -2,10 +2,12 @@ use std::{path::PathBuf, time::Duration};
 use futures::stream::TryStreamExt;
 
 use rspotify::{model::*, prelude::{BaseClient, OAuthClient}, AuthCodeSpotify};
+use std::process::{Command, Child};
+use tempfile;
 mod controlclient;
 
-pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _username: &String, empty_playlist: u8) {
-    let spotify_api = controlclient::create_playback_client(cache_dir).await;
+pub async fn tsar_run(output_dir: &PathBuf, uri: &String, cache_dir: &PathBuf, recorder_binary_path: &PathBuf, empty_playlist: u8) {
+    let spotify_api = controlclient::create_playback_client(&cache_dir).await;
 
     let tracks: Vec<FullTrack>;
 
@@ -26,11 +28,30 @@ pub async fn tsar_run(_output_dir: PathBuf, uri: &String, cache_dir: PathBuf, _u
         panic!("Unable to handle uri {uri}. uri should be for an album <spotify:album:blah> or a playlist <spotify:playlist:blah>");
     }
 
+    let workdir = tempfile::tempdir().unwrap();
+    let ogg_filename = workdir.path().join("raw_file.ogg");
+    let device_name = "_comp_";
+    let mut recorder = start_recorder(&ogg_filename, device_name, &cache_dir, recorder_binary_path).await;
+    let recorder_device_id = find_device_id(&spotify_api, device_name).await;
+
+
+    //TODO remove
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+
+    let mp3_filename = workdir.path().join("untagged_song.mp3");
+    let mut completed_tracks: Vec<FullTrack> = Vec::<FullTrack>::new();
+
+    // clean up recorder
+    let _ = recorder.kill();
+
+
+
     if uri_is_playlist(uri) && empty_playlist != 0 {
         // empty the playlist
         let playlist_uri = PlaylistId::from_id_or_uri(uri).expect("unable to create playlist object from uri, is uri valid?");
         let mut playlist_uris = Vec::<PlayableId>::new();
-        for track in tracks {
+        for track in completed_tracks {
             let id = track.id.expect("failed to get id");
             let playable = PlayableId::from(id);
             playlist_uris.push(playable);
@@ -145,4 +166,29 @@ async fn find_device_id(spotify_api: &AuthCodeSpotify, device_name: &str) -> Str
         }
     }
     panic!("failed to find the requested device {device_name}")
+}
+
+async fn start_recorder(output_filename: &PathBuf, device_name: &str, cache_dir: &PathBuf, recorder_binary_path: &PathBuf) -> Child {
+    let mut cmd = Command::new(recorder_binary_path);
+    cmd.args(["--name", device_name,
+        "--bitrate", "320",
+        "--system-cache", cache_dir.to_str().expect("failed to convert cache_dir to string"),
+        "--device-type", "computer",
+        "--initial-volume", "100",
+        "--disable-audio-cache",
+        "--disable-gapless",
+        "--backend", "pipe",
+        "--passthrough",
+        "--autoplay", "off",
+        "--format", "S24",
+        "--dither", "none",
+        "--device", output_filename.to_str().expect("failed to convert output_filename to string")]);
+    println!("starting recorder with command {prog:?} {args:?}", prog = cmd.get_program(), args = cmd.get_args());
+
+    let recorder = cmd.spawn().expect("failed to start librespot");
+    // let recorder warm up
+    tokio::time::sleep(Duration::from_secs(20)).await;
+
+
+    return recorder;
 }

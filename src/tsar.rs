@@ -1,6 +1,5 @@
 use clap::Parser;
 use std::path::PathBuf;
-// use librespot;
 // use id3;
 //
 use tsar;
@@ -28,9 +27,9 @@ struct Args {
     #[arg(long)]
     cache_dir: PathBuf,
 
-    /// username of the user to login as
-    #[arg{long}]
-    username: String,
+    /// path to the librespot binary
+    #[arg(long)]
+    librespot_binary_path: PathBuf,
 
 }
 
@@ -48,8 +47,8 @@ async fn main() {
     println!("{}", args.uri);
     println!("{}", args.cache_dir.display());
     println!("{}", args.output_dir.display());
-    println!("{}", args.username);
+    println!("{}", args.librespot_binary_path.display());
     println!("{}", args.empty_playlist);
 
-    tsar::tsar_run(args.output_dir, &args.uri, args.cache_dir, &args.username, args.empty_playlist).await;
+    tsar::tsar_run(&args.output_dir, &args.uri, &args.cache_dir, &args.librespot_binary_path, args.empty_playlist).await;
 }

@@ -50,5 +50,5 @@ async fn main() {
     println!("{}", args.librespot_binary_path.display());
     println!("{}", args.empty_playlist);
 
-    tsar::tsar_run(&args.output_dir, &args.uri, &args.cache_dir, &args.librespot_binary_path, args.empty_playlist).await;
+    tsar::tsar_run(&args.output_dir, &args.uri, &args.cache_dir, &args.librespot_binary_path, args.empty_playlist).await.expect("running tsar failed");
 }

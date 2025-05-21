@@ -3,7 +3,7 @@
 ## requires:
 ```
 librespot
- - built with --features passthrough-decoder
+ - build with `cargo build --features passthrough-decoder`
 spotipy
 eyed3
 click

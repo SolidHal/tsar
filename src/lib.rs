@@ -31,6 +31,15 @@ impl From<IdError> for TsarError {
     }
 }
 
+impl From<std::io::Error> for TsarError {
+    fn from(error: std::io::Error) -> Self {
+        TsarError {
+            kind: String::from("uri/id Error"),
+            message: error.to_string(),
+        }
+    }
+}
+
 impl From<&str> for TsarError {
     fn from(msg: &str) -> Self {
         TsarError {
@@ -92,12 +101,15 @@ pub async fn tsar_run(output_dir: &PathBuf, uri: &String, cache_dir: &PathBuf, r
     let device_name = "_comp_";
     let mut recorder = start_recorder(&ogg_filename, device_name, &cache_dir, recorder_binary_path).await;
     let recorder_device_id = find_device_id(&spotify_api, device_name).await?;
+    let mp3_filename = workdir.path().join("untagged_song.mp3");
 
     for track in tracks {
         // TODO
         // play the song
         play_song(&spotify_api, &recorder_device_id, &track).await?;
         // process the song from ogg to mp3 format
+        convert_song(&ogg_filename, &mp3_filename).await?;
+        // set the metadata
         // move track to out
         // cleanup tmps
     }
@@ -106,7 +118,6 @@ pub async fn tsar_run(output_dir: &PathBuf, uri: &String, cache_dir: &PathBuf, r
     tokio::time::sleep(Duration::from_secs(10)).await;
 
 
-    let mp3_filename = workdir.path().join("untagged_song.mp3");
     let mut completed_tracks: Vec<FullTrack> = Vec::<FullTrack>::new();
 
     // clean up recorder
@@ -303,6 +314,21 @@ async fn play_song(spotify_api: &AuthCodeSpotify, device_id: &str, track: &FullT
     tokio::time::sleep(Duration::from_secs(2)).await;
     println!("song is done!");
 
-    return Ok(());
+    return Ok(())
+}
 
+/// Shell out to ffmpeg to convert an ogg file to mp3
+async fn convert_song(ogg_filename: &PathBuf, mp3_filename: &PathBuf) -> Result<(), TsarError> {
+    println!("converting song...");
+
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-hide_banner",
+        "-i", ogg_filename.to_str().expect("Failed to convert ogg_filename to string"),
+        "-b:a", "320k",
+        mp3_filename.to_str().expect("failed to convert mp3_filename to string")]);
+    println!("starting ffmpeg with command {prog:?} {args:?}", prog = cmd.get_program(), args = cmd.get_args());
+
+    cmd.status()?;
+
+    Ok(())
 }

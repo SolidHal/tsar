@@ -10,6 +10,14 @@ click
 ffmpeg
 ```
 
+## Build
+```
+# start dev env
+nix develop
+# build
+cargo build
+```
+
 ## usage:
 
 normal usage:

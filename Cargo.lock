@@ -2732,6 +2732,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "retry"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1e211f878258887b3e65dd3c8ff9f530fe109f441a117ee0cdc27f341355032"
+dependencies = [
+ "rand 0.9.1",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3760,6 +3769,7 @@ dependencies = [
  "id3",
  "librespot",
  "log",
+ "retry",
  "rspotify",
  "tempfile",
  "tokio",

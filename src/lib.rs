@@ -50,6 +50,14 @@ impl From<String> for TsarError {
 }
 
 // TODO handle multiple uris at once
+/// Main entrypoint
+/// Inputs:
+/// output_dir - Where to write mp3s to
+/// uri -- spotify uri to a playlist, album, or track
+/// cache_dr - Where to look for and store api cache files
+/// recorder_binary_path - full filsystem path to the librespot binary
+/// empty_playlist - Whether to remove all tracks from the provided playlist when complete. Ignored
+///     when the uri is an album or track
 pub async fn tsar_run(output_dir: &PathBuf, uri: &String, cache_dir: &PathBuf, recorder_binary_path: &PathBuf, empty_playlist: u8) -> Result<(), TsarError> {
     let spotify_api = controlclient::create_playback_client(&cache_dir).await;
 
@@ -83,8 +91,16 @@ pub async fn tsar_run(output_dir: &PathBuf, uri: &String, cache_dir: &PathBuf, r
     let ogg_filename = workdir.path().join("raw_file.ogg");
     let device_name = "_comp_";
     let mut recorder = start_recorder(&ogg_filename, device_name, &cache_dir, recorder_binary_path).await;
-    let recorder_device_id = find_device_id(&spotify_api, device_name).await;
+    let recorder_device_id = find_device_id(&spotify_api, device_name).await?;
 
+    for track in tracks {
+        // TODO
+        // play the song
+        play_song(&spotify_api, &recorder_device_id, &track).await?;
+        // process the song from ogg to mp3 format
+        // move track to out
+        // cleanup tmps
+    }
 
     //TODO remove
     tokio::time::sleep(Duration::from_secs(10)).await;
@@ -149,11 +165,11 @@ fn print_tracks(tracks: &Vec<FullTrack>){
     }
 }
 
+/// Get all the tracks in the playlist provided via uri
 async fn find_playlist_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Result<Vec<FullTrack>, TsarError> {
-    // Get all the tracks from the playlist
     let playlist_uri = PlaylistId::from_id_or_uri(uri)?;
 
-    let playlist_paginator = spotify_api.playlist_items(playlist_uri, Option::from(None), Option::from(Market::FromToken));
+    let playlist_paginator = spotify_api.playlist_items(playlist_uri, None, Some(Market::FromToken));
     let playlist_items = playlist_paginator.try_collect::<Vec<_>>().await?;
 
     let mut tracks: Vec<FullTrack> = Vec::<FullTrack>::new();
@@ -171,13 +187,14 @@ async fn find_playlist_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Re
     return Ok(tracks);
 }
 
+/// Get all the tracks in the album provided via uri
 async fn find_album_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Result<Vec<FullTrack>, TsarError> {
     // Get all the tracks from the album
     let album_uri = AlbumId::from_id_or_uri(uri)?;
 
     // album_track gives us SimplifiedTrack objects, but playlist_items gives us FullTrack objects
     // convert all SimplifiedTrack objects by asking for each track in the album by uri
-    let album_paginator = spotify_api.album_track(album_uri, Option::from(Market::FromToken));
+    let album_paginator = spotify_api.album_track(album_uri, Some(Market::FromToken));
     let album_items = album_paginator.try_collect::<Vec<_>>().await?;
 
     let mut album_uris: Vec<TrackId> = Vec::<TrackId>::new();
@@ -188,16 +205,20 @@ async fn find_album_tracks(spotify_api: &AuthCodeSpotify, uri: &String) -> Resul
         album_uris.push(uri);
     }
 
-    let album_tracks = spotify_api.tracks(album_uris, Option::from(Market::FromToken)).await?;
+    let album_tracks = spotify_api.tracks(album_uris, Some(Market::FromToken)).await?;
 
     return Ok(album_tracks);
 }
 
+/// Lookup a FullTrack object provided a track uri
 async fn find_track_from_uri(spotify_api: &AuthCodeSpotify, uri: &String) -> Result<FullTrack, TsarError> {
     let id = TrackId::from_id_or_uri(uri)?;
-    return Ok(spotify_api.track(id, Option::from(Market::FromToken)).await?);
+    return Ok(spotify_api.track(id, Some(Market::FromToken)).await?);
 }
 
+
+/// Provided a device_name, returns the associated device_id
+/// Returns error if no device with the provided device_name was found
 async fn find_device_id(spotify_api: &AuthCodeSpotify, device_name: &str) -> Result<String, TsarError>{
 
     let mut device_id = None;
@@ -226,6 +247,7 @@ async fn find_device_id(spotify_api: &AuthCodeSpotify, device_name: &str) -> Res
     return Err(format!("Failed to find device with name {device_name}.").into());
 }
 
+/// Spawns librespot configured to output played tracks to a file
 async fn start_recorder(output_filename: &PathBuf, device_name: &str, cache_dir: &PathBuf, recorder_binary_path: &PathBuf) -> Child {
     let mut cmd = Command::new(recorder_binary_path);
     cmd.args(["--name", device_name,
@@ -249,4 +271,38 @@ async fn start_recorder(output_filename: &PathBuf, device_name: &str, cache_dir:
 
 
     return recorder;
+}
+
+
+/// Plays the Requested Track
+/// sleeps while the track is playing
+/// returns once playback is complete
+async fn play_song(spotify_api: &AuthCodeSpotify, device_id: &str, track: &FullTrack) -> Result<(), TsarError> {
+    let uri = track.id.clone().expect("Cannot play track without id");
+    let uri_list = vec!(PlayableId::from(uri));
+    spotify_api.start_uris_playback(uri_list, Some(device_id), None, None).await?;
+
+    while spotify_api.current_playing(Some(Market::FromToken),  None::<&[_]>).await
+        .expect("Unable to get current play status from spotify").is_none() {
+        println!("wating for playback to start");
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+
+    while let Some(cur_playing) = spotify_api.current_playing(Some(Market::FromToken), None::<&[_]>).await.expect("Unable to get current play status from spotify") {
+        let cur_playable = cur_playing.item.expect("Something is playing, but we are unsure what!");
+        let cur_song = get_track_from_playable(&cur_playable);
+        if track.id.as_ref().expect("Unable to get id from passed in track")
+                .eq(cur_song.id.as_ref().expect("Current playing track doesn't have an id")) {
+            return Err(format!("Music is playing, but it isn't playing our requested song").into());
+        }
+        println!("song is playing...");
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+
+    // let the recorders decoder finish up
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    println!("song is done!");
+
+    return Ok(());
+
 }
